@@ -32,14 +32,28 @@
         group: rex
         mode: "0644"
         content: |
-          temps.svc.{{ home_domain }} {
-              tls internal
+          http://temps.{{ service_domain }}, http://temps.{{ service_domain }}.{{ tailscale_domain }} {
               reverse_proxy {{ ms01_ip }}:8765
           }
 
-          webui.svc.{{ home_domain }} {
-              tls internal
+          http://webui.{{ service_domain }}, http://webui.{{ service_domain }}.{{ tailscale_domain }} {
               reverse_proxy {{ faex1_ip }}:3000
+          }
+
+          http://adm.{{ service_domain }}, http://adm.{{ service_domain }}.{{ tailscale_domain }} {
+              reverse_proxy https://{{ flashstor_ip }}:8001 {
+                  transport http {
+                      tls_insecure_skip_verify
+                  }
+              }
+          }
+
+          http://adm-offsite.{{ service_domain }}.{{ tailscale_domain }} {
+              reverse_proxy https://{{ flashstor_offsite_tailscale_ip }}:8001 {
+                  transport http {
+                      tls_insecure_skip_verify
+                  }
+              }
           }
       register: caddy_config
 
@@ -60,9 +74,15 @@
                 TZ: Asia/Taipei
 
               ports:
+                # LAN
                 - "{{ ms01_ip }}:80:80"
                 - "{{ ms01_ip }}:443:443"
                 - "{{ ms01_ip }}:443:443/udp"
+
+                # Tailscale
+                - "{{ ms01_tailscale_ip }}:80:80"
+                - "{{ ms01_tailscale_ip }}:443:443"
+                - "{{ ms01_tailscale_ip }}:443:443/udp"
 
               volumes:
                 - ./conf:/etc/caddy:ro

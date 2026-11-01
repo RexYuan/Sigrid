@@ -20,7 +20,6 @@
         group: rex
         mode: "0755"
 
-
     - name: Configure Blocky
       ansible.builtin.copy:
         dest: "{{ blocky_dir }}/config.yml"
@@ -45,26 +44,39 @@
 
           customDNS:
             zone: |
-              $ORIGIN {{ home_domain }}.
+              $ORIGIN .
               $TTL 300
 
-              ; Machines
-              router     300 IN A {{ router_ip }}
-              switch     300 IN A {{ switch_ip }}
-              ms01       300 IN A {{ ms01_ip }}
-              faex1      300 IN A {{ faex1_ip }}
-              flashstor   300 IN A {{ flashstor_ip }}
-              mba        300 IN A {{ mba_ip }}
-              glkvm      300 IN A {{ glkvm_ip }}
-              jetkvm     300 IN A {{ jetkvm_ip }}
-              jetkvm2    300 IN A {{ jetkvm2_ip }}
+              ; LAN machines
+              router.{{ lan_domain }}.     300 IN A {{ router_ip }}
+              switch.{{ lan_domain }}.     300 IN A {{ switch_ip }}
+              ms01.{{ lan_domain }}.       300 IN A {{ ms01_ip }}
+              faex1.{{ lan_domain }}.      300 IN A {{ faex1_ip }}
+              flashstor.{{ lan_domain }}.  300 IN A {{ flashstor_ip }}
+              mba.{{ lan_domain }}.        300 IN A {{ mba_ip }}
+              glkvm.{{ lan_domain }}.      300 IN A {{ glkvm_ip }}
+              jetkvm.{{ lan_domain }}.     300 IN A {{ jetkvm_ip }}
+              jetkvm2.{{ lan_domain }}.    300 IN A {{ jetkvm2_ip }}
 
-              ; Reverse proxy
-              proxy      300 IN A {{ reverse_proxy_ip }}
+              ; Tailscale machines
+              ms01.{{ tailscale_domain }}. 300 IN A {{ ms01_tailscale_ip }}
 
-              ; Services
-              temps.svc   300 IN CNAME proxy.{{ home_domain }}.
-              webui.svc   300 IN CNAME proxy.{{ home_domain }}.
+              ; LAN reverse proxy
+              proxy.{{ service_domain }}. 300 IN A {{ reverse_proxy_ip }}
+
+              ; LAN services
+              temps.{{ service_domain }}. 300 IN CNAME proxy.{{ service_domain }}.
+              webui.{{ service_domain }}. 300 IN CNAME proxy.{{ service_domain }}.
+              adm.{{ service_domain }}. 300 IN CNAME proxy.{{ service_domain }}.
+
+              ; Tailscale reverse proxy
+              proxy.{{ service_domain }}.{{ tailscale_domain }}. 300 IN A {{ ms01_tailscale_ip }}
+
+              ; Tailscale services
+              temps.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
+              webui.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
+              adm.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
+              adm-offsite.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
 
           ports:
             dns: 53
@@ -87,8 +99,13 @@
                 TZ: Asia/Taipei
 
               ports:
+                # LAN
                 - "{{ ms01_ip }}:53:53/tcp"
                 - "{{ ms01_ip }}:53:53/udp"
+
+                # Tailscale
+                - "{{ ms01_tailscale_ip }}:53:53/tcp"
+                - "{{ ms01_tailscale_ip }}:53:53/udp"
 
               volumes:
                 - ./config.yml:/app/config.yml:ro

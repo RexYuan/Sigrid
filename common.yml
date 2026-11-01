@@ -1,9 +1,14 @@
-
 ---
-home_domain: "home.arpa"
+# Domains
+lan_domain: "lan"
+tailscale_domain: "ts"
+service_domain: "svc"
 
+# Network
 router_ip: "192.168.50.1"
 switch_ip: "192.168.50.2"
+
+# LAN devices
 ms01_ip: "192.168.50.100"
 faex1_ip: "192.168.50.151"
 flashstor_ip: "192.168.50.95"
@@ -12,4 +17,9 @@ glkvm_ip: "192.168.50.184"
 jetkvm_ip: "192.168.50.46"
 jetkvm2_ip: "192.168.50.153"
 
+# Tailscale devices
+ms01_tailscale_ip: "100.83.250.70"
+flashstor_offsite_tailscale_ip: "100.96.0.90"
+
+# Reverse proxy
 reverse_proxy_ip: "{{ ms01_ip }}"
