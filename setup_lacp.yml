@@ -1,0 +1,63 @@
+
+---
+- name: Set up LACP on MS-01
+  hosts: ms01
+  become: true
+
+  tasks:
+    - name: Configure LACP bond
+      ansible.builtin.copy:
+        dest: /etc/netplan/01-ms01-lacp.yaml
+        owner: root
+        group: root
+        mode: "0600"
+        backup: true
+        content: |
+          network:
+            version: 2
+            renderer: NetworkManager
+
+            ethernets:
+              enp3s0f0np0:
+                dhcp4: false
+                dhcp6: false
+
+              enp3s0f1np1:
+                dhcp4: false
+                dhcp6: false
+
+            bonds:
+              bond0:
+                interfaces:
+                  - enp3s0f0np0
+                  - enp3s0f1np1
+
+                macaddress: "58:47:ca:7a:94:02"
+
+                dhcp4: true
+                dhcp6: true
+
+                parameters:
+                  mode: 802.3ad
+                  lacp-rate: fast
+                  mii-monitor-interval: 100
+                  transmit-hash-policy: layer3+4
+      notify: Apply Netplan
+
+    - name: Validate Netplan
+      ansible.builtin.command: netplan generate
+      changed_when: false
+
+    - name: Apply pending network changes
+      ansible.builtin.meta: flush_handlers
+
+    - name: Verify LACP aggregation
+      ansible.builtin.command:
+        cmd: cat /sys/class/net/bond0/bonding/ad_num_ports
+      register: lacp_ports
+      changed_when: false
+      failed_when: lacp_ports.stdout | trim != "2"
+
+  handlers:
+    - name: Apply Netplan
+      ansible.builtin.command: netplan apply

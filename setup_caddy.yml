@@ -1,0 +1,77 @@
+
+---
+- name: Set up Caddy on MS-01
+  hosts: ms01
+  become: true
+
+  vars_files:
+    - common.yml
+
+  vars:
+    caddy_dir: /home/rex/homelab/caddy
+    caddy_version: "2.11.7"
+
+  tasks:
+    - name: Create Caddy directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: rex
+        group: rex
+        mode: "0755"
+      loop:
+        - "{{ caddy_dir }}"
+        - "{{ caddy_dir }}/conf"
+        - "{{ caddy_dir }}/data"
+        - "{{ caddy_dir }}/config"
+
+    - name: Configure Caddy
+      ansible.builtin.copy:
+        dest: "{{ caddy_dir }}/conf/Caddyfile"
+        owner: rex
+        group: rex
+        mode: "0644"
+        content: |
+          temps.svc.{{ home_domain }} {
+              tls internal
+              reverse_proxy {{ ms01_ip }}:8765
+          }
+
+          webui.svc.{{ home_domain }} {
+              tls internal
+              reverse_proxy {{ faex1_ip }}:3000
+          }
+      register: caddy_config
+
+    - name: Create Docker Compose configuration
+      ansible.builtin.copy:
+        dest: "{{ caddy_dir }}/compose.yaml"
+        owner: rex
+        group: rex
+        mode: "0644"
+        content: |
+          services:
+            caddy:
+              image: caddy:{{ caddy_version }}-alpine
+              container_name: caddy
+              restart: unless-stopped
+
+              environment:
+                TZ: Asia/Taipei
+
+              ports:
+                - "{{ ms01_ip }}:80:80"
+                - "{{ ms01_ip }}:443:443"
+                - "{{ ms01_ip }}:443:443/udp"
+
+              volumes:
+                - ./conf:/etc/caddy:ro
+                - ./data:/data
+                - ./config:/config
+
+    - name: Deploy Caddy
+      community.docker.docker_compose_v2:
+        project_src: "{{ caddy_dir }}"
+        state: present
+        pull: missing
+        recreate: "{{ 'always' if caddy_config.changed else 'auto' }}"

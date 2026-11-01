@@ -1,0 +1,15 @@
+
+---
+home_domain: "home.arpa"
+
+router_ip: "192.168.50.1"
+switch_ip: "192.168.50.2"
+ms01_ip: "192.168.50.100"
+faex1_ip: "192.168.50.151"
+flashstor_ip: "192.168.50.95"
+mba_ip: "192.168.50.125"
+glkvm_ip: "192.168.50.184"
+jetkvm_ip: "192.168.50.46"
+jetkvm2_ip: "192.168.50.153"
+
+reverse_proxy_ip: "{{ ms01_ip }}"
