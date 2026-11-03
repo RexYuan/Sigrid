@@ -1,8 +1,11 @@
+[faex1]
+192.168.50.151 ansible_python_interpreter=/usr/bin/python3.14
+
 [ms01]
 192.168.50.100 ansible_python_interpreter=/usr/bin/python3.14
 
 [flashstor]
-192.168.50.95 ansible_port=7778 ansible_python_interpreter=/opt/bin/python3.11
+192.168.50.95 ansible_port=7778 ansible_python_interpreter=/opt/bin/python3.13
 
 [all:vars]
 ansible_user=rex
