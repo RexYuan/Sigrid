@@ -1,0 +1,88 @@
+
+---
+- name: Deploy Homelab Temp Monitor
+  hosts: ms01
+  become: true
+
+  vars:
+    monitor_src: "{{ playbook_dir }}/services/homelab-monitor"
+    monitor_dir: /home/rex/homelab-monitor
+
+  tasks:
+    - name: Create monitor directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: rex
+        group: rex
+        mode: "0755"
+      loop:
+        - "{{ monitor_dir }}"
+        - "{{ monitor_dir }}/static"
+
+    - name: Deploy backend and configuration
+      ansible.builtin.copy:
+        src: "{{ monitor_src }}/{{ item }}"
+        dest: "{{ monitor_dir }}/{{ item }}"
+        owner: rex
+        group: rex
+        mode: "0755"
+      loop:
+        - server.py
+        - collect_linux.py
+        - collect_flashstor.sh
+        - config.json
+      notify: Restart Homelab Temp Monitor
+
+    - name: Deploy static assets
+      ansible.builtin.copy:
+        src: "{{ monitor_src }}/static/"
+        dest: "{{ monitor_dir }}/static/"
+        owner: rex
+        group: rex
+        mode: preserve
+        directory_mode: "0755"
+      notify: Restart Homelab Temp Monitor
+
+    - name: Install systemd service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/homelab-temp-monitor.service
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Homelab Temp Monitor
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          Type=simple
+          User=rex
+          Group=rex
+          WorkingDirectory=/home/rex/homelab-monitor
+          Environment=HOME=/home/rex
+          Environment=PYTHONUNBUFFERED=1
+          ExecStart=/usr/bin/python3 /home/rex/homelab-monitor/server.py --bind 192.168.50.100 --port 8765
+          Restart=on-failure
+          RestartSec=3
+          NoNewPrivileges=true
+          UMask=0077
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: Restart Homelab Temp Monitor
+
+    - name: Enable and start service
+      ansible.builtin.systemd_service:
+        name: homelab-temp-monitor.service
+        enabled: true
+        state: started
+        daemon_reload: true
+
+  handlers:
+    - name: Restart Homelab Temp Monitor
+      ansible.builtin.systemd_service:
+        name: homelab-temp-monitor.service
+        state: restarted
+        daemon_reload: true

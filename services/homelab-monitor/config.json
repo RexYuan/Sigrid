@@ -1,0 +1,8 @@
+{
+  "interval_seconds": 5,
+  "hosts": [
+    { "id": "faex1", "label": "FAEX1", "transport": "ssh", "ssh_target": "faex1" },
+    { "id": "ms01", "label": "MS-01", "transport": "local" },
+    { "id": "flashstor", "label": "FLASHSTOR 12 PRO", "transport": "ssh", "ssh_target": "flashstor" }
+  ]
+}
