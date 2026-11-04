@@ -1,0 +1,179 @@
+
+---
+- name: Set up llmster on FAEX1
+  hosts: faex1
+
+  vars_files:
+    - common.yml
+
+  vars:
+    llmster_dir: /home/rex/homelab/llmster
+    llmster_home: /home/rex/.lmstudio
+    llmster_models: /mnt/p5800x/llmster/models
+    llmster_defaults: "{{ llmster_home }}/.internal/user-concrete-model-default-config"
+
+    llmster_model_defs:
+      - repo: llmfan46/gemma-4-Ortenzya-The-Creative-Wordsmith-31B-it-uncensored-heretic-GGUF
+        file: gemma-4-Ortenzya-The-Creative-Wordsmith-31B-it-uncensored-heretic-Q8_0.gguf
+        context: 262144
+
+      - repo: ggml-org/gemma-4-31B-it-GGUF
+        file: gemma-4-31B-it-Q8_0.gguf
+        context: 262144
+
+      - repo: ggml-org/GLM-4.7-Flash-GGUF
+        file: GLM-4.7-Flash-Q8_0.gguf
+        context: 196608
+
+      - repo: HauhauCS/GLM-4.7-Flash-Uncensored-HauhauCS-Aggressive
+        file: GLM-4.7-Flash-Uncensored-HauhauCS-Aggressive-Q8_0.gguf
+        context: 196608
+
+      - repo: mradermacher/L3.3-70B-Euryale-v2.3-GGUF
+        file: L3.3-70B-Euryale-v2.3.Q5_K_M.gguf
+        context: 131072
+
+      - repo: bartowski/mistralai_Mistral-Small-4-119B-2603-GGUF
+        file: mistralai_Mistral-Small-4-119B-2603-Q4_K_M-00001-of-00002.gguf
+        context: 786432
+
+      - repo: lmstudio-community/gpt-oss-120b-GGUF
+        file: gpt-oss-120b-MXFP4-00001-of-00002.gguf
+        context: 131072
+
+      - repo: lmstudio-community/gpt-oss-20b-GGUF
+        file: gpt-oss-20b-MXFP4.gguf
+        context: 131072
+
+      - repo: lmstudio-community/Qwen3-4B-Instruct-2507-GGUF
+        file: Qwen3-4B-Instruct-2507-Q4_K_M.gguf
+        context: 262144
+
+      - repo: lmstudio-community/Qwen3.8-27B-GGUF
+        file: Qwen3.8-27B-Q8_0.gguf
+        context: 262144
+
+      - repo: HauhauCS/Qwen3.8-27B-Uncensored-HauhauCS-Aggressive-MTP-GGUF
+        file: Qwen3.8-27B-Uncensored-HauhauCS-Aggressive-Q8_K_P.gguf
+        context: 262144
+
+      - repo: bartowski/TheDrummer_Cydonia-24B-v4.2.0-GGUF
+        file: TheDrummer_Cydonia-24B-v4.2.0-Q8_0.gguf
+        context: 131072
+
+  tasks:
+    - name: Create llmster directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: rex
+        group: rex
+        mode: "0755"
+      loop:
+        - "{{ llmster_dir }}"
+        - "{{ llmster_home }}"
+
+    - name: Link models
+      ansible.builtin.file:
+        src: "{{ llmster_models }}"
+        dest: "{{ llmster_home }}/models"
+        state: link
+
+    - name: Install llmster
+      ansible.builtin.shell: |
+        set -o pipefail
+        curl -fsSL https://lmstudio.ai/install.sh | bash
+      args:
+        executable: /bin/bash
+        creates: "{{ llmster_home }}/bin/lms"
+
+    - name: Install ROCm runtime
+      ansible.builtin.command:
+        cmd: "{{ llmster_home }}/bin/lms runtime get llama.cpp-linux-x86_64-amd-rocm-avx2 --channel stable --yes"
+      register: runtime_install
+      changed_when: "'is already installed' not in (runtime_install.stdout ~ runtime_install.stderr)"
+
+    - name: Select ROCm runtime
+      ansible.builtin.command:
+        cmd: "{{ llmster_home }}/bin/lms runtime select llama.cpp-linux-x86_64-amd-rocm-avx2 --latest"
+      register: runtime_selection
+      changed_when: "'Selected ' in runtime_selection.stdout"
+
+    - name: Create model-default directories
+      ansible.builtin.file:
+        path: "{{ llmster_defaults }}/{{ item.repo }}"
+        state: directory
+        owner: rex
+        group: rex
+        mode: "0755"
+      loop: "{{ llmster_model_defs }}"
+      loop_control:
+        label: "{{ item.repo }}"
+
+    - name: Configure model context lengths
+      ansible.builtin.copy:
+        dest: "{{ llmster_defaults }}/{{ item.repo }}/{{ item.file }}.json"
+        owner: rex
+        group: rex
+        mode: "0644"
+        content: |
+          {
+            "preset": "",
+            "operation": {"fields": []},
+            "load": {
+              "fields": [
+                {"key": "llm.load.contextLength", "value": {{ item.context }}}
+              ]
+            }
+          }
+      loop: "{{ llmster_model_defs }}"
+      loop_control:
+        label: "{{ item.repo }} ({{ item.context }} tokens)"
+      register: llmster_model_defaults
+
+    - name: Configure llmster service
+      ansible.builtin.copy:
+        dest: "{{ llmster_dir }}/lmstudio.service"
+        owner: rex
+        group: rex
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=LM Studio Headless Server
+          Wants=network-online.target
+          After=network-online.target
+          RequiresMountsFor=/mnt/p5800x
+
+          [Service]
+          Type=oneshot
+          RemainAfterExit=yes
+          User=rex
+          Group=rex
+          WorkingDirectory=/home/rex
+          Environment="HOME=/home/rex"
+          Environment="PATH=/home/rex/.lmstudio/bin:/usr/local/bin:/usr/bin:/bin"
+          ExecStartPre={{ llmster_home }}/bin/lms daemon up
+          ExecStart={{ llmster_home }}/bin/lms server start --port 1234 --bind 127.0.0.1
+          ExecStop={{ llmster_home }}/bin/lms daemon down
+          TimeoutStartSec=180
+          TimeoutStopSec=60
+
+          [Install]
+          WantedBy=multi-user.target
+      register: llmster_config
+
+    - name: Link llmster service
+      become: true
+      ansible.builtin.file:
+        src: "{{ llmster_dir }}/lmstudio.service"
+        dest: /etc/systemd/system/lmstudio.service
+        state: link
+      register: llmster_service
+
+    - name: Start llmster
+      become: true
+      ansible.builtin.systemd_service:
+        name: lmstudio
+        enabled: true
+        daemon_reload: true
+        state: "{{ 'restarted' if llmster_config.changed or llmster_service.changed or runtime_install.changed or runtime_selection.changed or llmster_model_defaults.changed else 'started' }}"

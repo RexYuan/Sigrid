@@ -1,0 +1,104 @@
+
+---
+- name: Set up Hugging Face CLI and models on FAEX1
+  hosts: faex1
+
+  vars:
+    hf_bin: /home/rex/.local/bin/hf
+    hf_models_dir: /mnt/p5800x/llmster/models
+
+    hf_models:
+      - repo: HauhauCS/GLM-4.7-Flash-Uncensored-HauhauCS-Aggressive
+        files:
+          - GLM-4.7-Flash-Uncensored-HauhauCS-Aggressive-Q8_0.gguf
+
+      - repo: HauhauCS/Qwen3.8-27B-Uncensored-HauhauCS-Aggressive-MTP-GGUF
+        files:
+          - Qwen3.8-27B-Uncensored-HauhauCS-Aggressive-Q8_K_P.gguf
+
+      - repo: bartowski/TheDrummer_Cydonia-24B-v4.2.0-GGUF
+        files:
+          - TheDrummer_Cydonia-24B-v4.2.0-Q8_0.gguf
+
+      - repo: bartowski/mistralai_Mistral-Small-4-119B-2603-GGUF
+        files:
+          - mistralai_Mistral-Small-4-119B-2603-Q4_K_M-00001-of-00002.gguf
+          - mistralai_Mistral-Small-4-119B-2603-Q4_K_M-00002-of-00002.gguf
+          - mmproj-mistralai_Mistral-Small-4-119B-2603-f16.gguf
+
+      - repo: ggml-org/GLM-4.7-Flash-GGUF
+        files:
+          - GLM-4.7-Flash-Q8_0.gguf
+
+      - repo: ggml-org/gemma-4-31B-it-GGUF
+        files:
+          - gemma-4-31B-it-Q8_0.gguf
+          - mmproj-gemma-4-31B-it-BF16.gguf
+          - mtp-gemma-4-31B-it-Q8_0.gguf
+
+      - repo: llmfan46/gemma-4-Ortenzya-The-Creative-Wordsmith-31B-it-uncensored-heretic-GGUF
+        files:
+          - gemma-4-Ortenzya-The-Creative-Wordsmith-31B-it-uncensored-heretic-Q8_0.gguf
+
+      - repo: lmstudio-community/Qwen3-4B-Instruct-2507-GGUF
+        files:
+          - Qwen3-4B-Instruct-2507-Q4_K_M.gguf
+
+      - repo: lmstudio-community/Qwen3.8-27B-GGUF
+        files:
+          - Qwen3.8-27B-Q8_0.gguf
+          - mmproj-Qwen3.8-27B-BF16.gguf
+
+      - repo: lmstudio-community/gpt-oss-120b-GGUF
+        files:
+          - gpt-oss-120b-MXFP4-00001-of-00002.gguf
+          - gpt-oss-120b-MXFP4-00002-of-00002.gguf
+
+      - repo: lmstudio-community/gpt-oss-20b-GGUF
+        files:
+          - gpt-oss-20b-MXFP4.gguf
+
+      - repo: mradermacher/L3.3-70B-Euryale-v2.3-GGUF
+        files:
+          - L3.3-70B-Euryale-v2.3.Q5_K_M.gguf
+
+  tasks:
+    - name: Verify P5800X is mounted
+      command: mountpoint -q /mnt/p5800x
+      changed_when: false
+
+    - name: Install official Hugging Face CLI
+      shell: |
+        set -o pipefail
+        curl -LsSf https://hf.co/cli/install.sh | bash
+      args:
+        executable: /bin/bash
+        creates: "{{ hf_bin }}"
+
+    - name: Check existing model files
+      stat:
+        path: "{{ hf_models_dir }}/{{ item.0.repo }}/{{ item.1 }}"
+        get_checksum: false
+      loop: "{{ hf_models | subelements('files') }}"
+      loop_control:
+        label: "{{ item.0.repo }}/{{ item.1 }}"
+      register: hf_file_status
+
+    - name: Download missing model files
+      command:
+        argv:
+          - "{{ hf_bin }}"
+          - download
+          - "{{ item.item.0.repo }}"
+          - "{{ item.item.1 }}"
+          - --local-dir
+          - "{{ hf_models_dir }}/{{ item.item.0.repo }}"
+      loop: "{{ hf_file_status.results }}"
+      loop_control:
+        label: "{{ item.item.0.repo }}/{{ item.item.1 }}"
+      when: >
+        not item.stat.exists or
+        (item.stat.size | default(0) | int) == 0
+      environment:
+        HF_HUB_DOWNLOAD_TIMEOUT: "60"
+      changed_when: true
