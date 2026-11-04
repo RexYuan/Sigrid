@@ -1,9 +1,13 @@
 
-# Homelab Temp Monitor
+# Homelab Monitor
+
+**Version:** v1.1.0 — live Temperature and Usage monitoring.
 
 ## Reporting
 
-### Temperature colors
+### Temperature tab
+
+Shows currently available temperature sensors per machine. FAEX1 and MS-01 list individual NVMe drives; Flashstor lists its 12 NVMe drives under **CRUCIAL P3 PLUS 4 TB ARRAY**. Temperature drive labels retain their device/OS descriptions (for example, `Samsung 990 PRO 2 TB — Ubuntu`).
 
 Colors are advisory thresholds, not manufacturer-defined thermal limits.
 
@@ -15,15 +19,33 @@ Colors are advisory thresholds, not manufacturer-defined thermal limits.
 
 These thresholds are defined in `static/app.js`.
 
+### Usage tab
+
+Shows **CPU** and **GPU** aggregate utilization, **RAM** usage, and filesystem capacity. Percentages and progress bars use green/amber/red utilization thresholds; RAM and storage used/total capacity labels remain neutral.
+
+| Metric | Normal | Warning | Critical |
+|--------|--------|---------|----------|
+| CPU / GPU | Below 70% | 70–89.9% | 90% and above |
+| RAM | Below 75% | 75–89.9% | 90% and above |
+| Storage | Below 80% | 80–94.9% | 95% and above |
+
+The usage thresholds are display guidance, **not** hardware failure or thermal limits. Usage capacities are displayed in decimal **GB/TB (base 1000)**, not GiB/TiB. CPU/GPU are utilization percentages, not temperature or power consumption.
+
+| Host | Usage storage shown | What is counted |
+|------|---------------------|-----------------|
+| FAEX1 | `Samsung 990 PRO 2 TB — ext4`; `Intel Optane P5800X 1.6 TB — XFS` | Mounted Ubuntu root and `/mnt/p5800x` filesystems |
+| MS-01 | `Samsung PM9A3 15.36 TB — Btrfs` | Mounted Ubuntu root filesystem |
+| Flashstor | `RAID5 — Btrfs` | The `/volume1` filesystem as **one** RAID volume, not 12 individual capacity readings |
+
+The Windows SSD on FAEX1 can still appear in the **Temperature** tab because its physical sensor is readable, but its **Usage** card and volume count are omitted while the filesystem is unmounted. Filesystem mount paths are not shown on the cards. Reported storage capacity is filesystem usage, not an SSD's advertised raw capacity.
+
 ### Offline behavior
 
 If collection fails:
 
-- The affected host is marked offline.
-- Previously collected temperatures are hidden from the live display.
-- An error message indicates the collection failure.
-- Offline hosts are excluded from live summary statistics.
-- The server retains the last successful snapshot in memory.
+- The affected host is marked offline, with an error message.
+- Previously collected temperature and usage values are **not presented as live**; unavailable usage values appear as `N/A`.
+- The server retains the last successful snapshot in memory for diagnostics, but the UI does not treat it as a fresh reading.
 
 When the monitoring server itself becomes unreachable, the frontend reports the connection failure and continues retrying.
 
@@ -34,6 +56,7 @@ cd services/homelab-monitor
 python3 -m unittest discover -s tests -v
 python3 -m py_compile server.py collect_linux.py
 sh -n collect_flashstor.sh
+if command -v node >/dev/null; then node --check static/app.js; fi
 ```
 
 ### Deployment verification
@@ -81,7 +104,7 @@ sudo ss -ltnp | grep 8765
 
 SSH must work noninteractively from the `rex` account on MS-01.
 
-Verify the remote collectors from `/home/rex/homelab-monitor` on MS-01:
+Verify the remote collectors from `/home/rex/homelab/homelab-monitor` on MS-01:
 
 ```bash
 python3 collect_linux.py --profile ms01 | python3 -m json.tool
@@ -112,15 +135,30 @@ nvidia-smi --query-gpu=temperature.gpu \
 
 Missing temperatures may indicate unavailable sensors, driver limitations, or changes to the Linux sysfs topology.
 
+### Missing or incorrect usage readings
+
+Check the complete collector JSON using the commands in **Host offline** above; the `usage` object should contain `cpu_pct`, `gpu_pct`, `ram`, and `storage`. A `null` value means the reading was unavailable, not necessarily 0%.
+
+On the relevant Linux host, compare against the operating system:
+
+```bash
+cat /proc/meminfo | grep -E '^(MemTotal|MemAvailable):'
+cat /proc/stat | head -n 1
+findmnt -T /  # Inspect the root filesystem
+df -h /      # Compare filesystem used/total
+```
+
+For FAEX1, verify `/mnt/p5800x` is actually mounted before interpreting its capacity. For MS-01, check `nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits`; for FAEX1, inspect `/sys/class/drm/card*/device/gpu_busy_percent` (where supported). Flashstor storage is measured at `/volume1` with `df`; usage shown for an unavailable mount must not be interpreted as another filesystem's capacity.
+
 ## How it works
 
 ### Architecture
 
-MS-01 is both the central collector and the HTTP server. It runs `server.py` through the `homelab-temp-monitor.service` systemd service, listening on `192.168.50.100:8765`. All temperature collection is initiated by MS-01; FAEX1 and Flashstor do not run persistent monitoring agents.
+MS-01 is both the central collector and the HTTP server. It runs `server.py` through the `homelab-temp-monitor.service` systemd service, listening on `192.168.50.100:8765`. All monitoring collection is initiated by MS-01; FAEX1 and Flashstor do not run persistent monitoring agents.
 
 ```mermaid
 flowchart TD
-    subgraph Hosts["Temperature sources"]
+    subgraph Hosts["Temperature and usage sources"]
         A["MS-01<br/>collect_linux.py<br/>Local subprocess"]
         B["FAEX1<br/>collect_linux.py<br/>SSH + Python"]
         C["Flashstor<br/>collect_flashstor.sh<br/>SSH + sh"]
@@ -150,16 +188,16 @@ The service uses the following configuration:
 | Setting | Value |
 |---------|-------|
 | User / Group | `rex` / `rex` |
-| Working directory | `/home/rex/homelab-monitor` |
+| Working directory | `/home/rex/homelab/homelab-monitor` |
 | Python executable | `/usr/bin/python3` |
-| Script | `/home/rex/homelab-monitor/server.py` |
+| Script | `/home/rex/homelab/homelab-monitor/server.py` |
 | Bind address | `192.168.50.100` |
 | Port | `8765` |
 | Startup dependency | `network-online.target` |
 | Restart policy | `on-failure`, after 3 seconds |
 | Boot target | `multi-user.target` |
 
-Systemd starts `server.py` with `--bind 192.168.50.100 --port 8765`. The Python process runs continuously, handling HTTP requests and collecting temperatures in a background thread.
+Systemd starts `server.py` with `--bind 192.168.50.100 --port 8765`. The Python process runs continuously, handling HTTP requests and collecting temperature and utilization readings in a background thread.
 
 Ansible manages the application files and systemd unit. When deployed files or configuration change, Ansible restarts the service to apply the changes. Repeated deployments without changes do not restart it.
 
@@ -175,9 +213,19 @@ The configured collection interval is 5 seconds. The interval is measured from t
 
 ### Hardware collection — `collect_linux.py` and `collect_flashstor.sh`
 
-Both collectors read temperatures directly from Linux sysfs. Most hardware temperatures are exposed as integer **millidegrees Celsius**, so the raw value must be divided by 1000 (e.g., `42500` = `42.5°C`).
+For temperature readings, both collectors read Linux sysfs. Most hardware temperatures are exposed as integer **millidegrees Celsius**, so the raw value must be divided by 1000 (e.g., `42500` = `42.5°C`). The collectors also return aggregate CPU/GPU utilization, RAM usage, and mounted filesystem usage.
 
 Sensor discovery is dynamic because `hwmonX` and `nvmeX` numbering can change across boots. The collectors identify devices using driver names, sensor labels, resolved sysfs paths, PCI addresses, and, where appropriate, NVMe serial numbers.
+
+#### Usage data collection
+
+- **CPU utilization:** the collectors take two samples of the aggregate `cpu` line in `/proc/stat` and compute the busy fraction from counter differences. The Linux Python collector samples over about 0.5 seconds; Flashstor's shell collector samples over about 1 second. `iowait` is treated as idle for this indicator.
+- **GPU utilization:** FAEX1 reads AMD `gpu_busy_percent` from `/sys/class/drm/card*/device/`; MS-01 uses `nvidia-smi --query-gpu=utilization.gpu`. Flashstor has no separate GPU utilization card. Unavailable readings are `null`.
+- **RAM:** both collectors use `/proc/meminfo`. Used RAM = `MemTotal - MemAvailable`; this avoids counting reclaimable cache as permanently used memory.
+- **Filesystems:** Linux uses `os.statvfs()` on mounted paths (`/` and, on FAEX1, `/mnt/p5800x`). Flashstor uses `df -P -k /volume1`. Unmounted or unreadable filesystems are not given fabricated capacity values.
+- **Storage labels:** the Usage tab uses filesystem-type labels (ext4, XFS, Btrfs), while the Temperature tab retains its existing device/OS labels.
+
+Each usage reading includes its percentage; RAM and storage also include `used_bytes` and `total_bytes`. The frontend converts byte values into decimal GB/TB.
 
 #### MS-01 — `collect_linux.py --profile ms01`
 
@@ -536,8 +584,12 @@ All three machines produce the same JSON structure containing:
 - `gpu` with labeled readings, or `null`
 - `ssds` with identifiers, names, device paths, PCI addresses, and Composite temperatures
 - `expected_ssds`
+- `usage`:
+  - `cpu_pct` and `gpu_pct` — aggregate utilization, or `null`.
+  - `ram` — `used_bytes`, `total_bytes`, and `pct`.
+  - `storage` — filesystem entries with `name`, `mount`, `used_bytes`, `total_bytes`, and `pct`.
 
-The collectors return `null` for unavailable temperature measurements, rather than inventing a value or falling back to NVMe Sensor 1/2.
+The collectors return `null` for unavailable temperature or usage measurements rather than inventing values. Temperature collection never falls back to NVMe Sensor 1/2.
 
 For an end-to-end check of the collector itself, run the appropriate script directly. On MS-01, the collectors can also be tested remotely using the SSH commands documented under Troubleshooting.
 
@@ -599,13 +651,13 @@ Manual refresh uses a `threading.Event` (`wake`) to wake the polling loop when i
 
 `static/app.js` polls `/api/live` every 2.5 seconds, independently of the server's 5-second hardware collection interval. Normal HTTP requests have a 3.5-second browser timeout; manual refresh has a 15-second timeout. Polling is skipped while the browser tab is hidden, and overlapping frontend requests are prevented using `pending` and `queuedManual`.
 
-`render()` generates the host cards from the JSON response. It displays the first CPU and GPU readings and each SSD's Composite temperature. Additional readings, such as FAEX1 SoC and Intel hottest core, are collected but not currently displayed. Flashstor's minimum, average, and maximum SSD temperatures are calculated client-side from available readings.
+`render()` builds both tabs from the same JSON snapshot. **Temperature** displays the first CPU and GPU temperature readings and each SSD's Composite temperature. **Usage** displays aggregate CPU/GPU percentages, RAM percentage and capacity, and mounted filesystem usage. Additional temperature readings such as FAEX1 SoC and Intel hottest core are collected but not displayed. Flashstor's minimum, average, and maximum SSD temperatures are calculated client-side from available readings.
 
-Temperature colors are assigned by `severity()` in `app.js`, using the CPU, GPU, and SSD thresholds defined in its `limits` object. These are advisory UI thresholds rather than hardware-specific thermal limits.
+Temperature colors are assigned by `severity()` in `app.js`, using the `limits` object. Usage colors use `usageSeverity()` and `usageLimits`. These are advisory UI thresholds, not manufacturer-defined hardware limits.
 
-When a host is offline, `cardFor()` preserves its identity and error information but substitutes `null` for displayed temperature values. `statsFor()` excludes offline hosts from live statistics. If the HTTP server itself becomes unreachable, the frontend marks the entire dashboard offline, hides stale temperatures, and continues retrying.
+When a host is offline, the Temperature and Usage cards retain its identity and error information but do not show stale measurements as live. The four-card overview statistics are no longer displayed. If the HTTP server itself becomes unreachable, the frontend marks the dashboard offline and continues retrying.
 
-The optional service worker (`static/sw.js`) caches static application assets for offline access but deliberately excludes `/api/` responses. It cannot provide historical or live temperature readings while the server is unreachable.
+The optional service worker (`static/sw.js`) caches static application assets for offline access but deliberately excludes `/api/` responses. It cannot provide historical or live monitoring readings while the server is unreachable.
 
 ### Deployment relationship
 
@@ -621,4 +673,4 @@ In live mode, the collectors retain additional CPU readings in the API's `cpu.re
 - **MS-01:** Package is displayed; Hottest Core is also calculated from individual CPU cores.
 - **Flashstor:** Package is displayed; Hottest Core is also calculated.
 
-The additional readings remain available through `/api/live` for debugging. The demo fixtures in `server.py` intentionally contain only displayed readings. The live collectors remain unchanged.
+The additional temperature readings remain available through `/api/live` for debugging. Demo mode supplies sample usage values for the Usage tab; live collectors provide real usage readings.

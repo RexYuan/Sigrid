@@ -5,7 +5,7 @@
 
   vars:
     monitor_src: "{{ playbook_dir }}/services/homelab-monitor"
-    monitor_dir: /home/rex/homelab-monitor
+    monitor_dir: /home/rex/homelab/homelab-monitor
 
   tasks:
     - name: Create monitor directories
@@ -44,6 +44,7 @@
       notify: Restart Homelab Temp Monitor
 
     - name: Install systemd service
+      become: true
       copy:
         dest: /etc/systemd/system/homelab-temp-monitor.service
         owner: root
@@ -59,10 +60,10 @@
           Type=simple
           User=rex
           Group=rex
-          WorkingDirectory=/home/rex/homelab-monitor
+          WorkingDirectory={{ monitor_dir }}
           Environment=HOME=/home/rex
           Environment=PYTHONUNBUFFERED=1
-          ExecStart=/usr/bin/python3 /home/rex/homelab-monitor/server.py --bind 192.168.50.100 --port 8765
+          ExecStart=/usr/bin/python3 {{ monitor_dir }}/server.py --bind 192.168.50.100 --port 8765
           Restart=on-failure
           RestartSec=3
           NoNewPrivileges=true

@@ -1,5 +1,5 @@
-// Homelab Temp Monitor — app shell only.
-const CACHE = "homelab-temp-static-v1";
+// Homelab Monitor — app shell only.
+const CACHE = "homelab-temp-static-v13";
 const FILES = [
   "/", "/index.html", "/style.css", "/app.js",
   "/favicon.svg", "/manifest.webmanifest",

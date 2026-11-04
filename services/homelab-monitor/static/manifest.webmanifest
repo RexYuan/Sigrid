@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Homelab Temp Monitor",
-  "short_name": "Homelab Temp",
-  "description": "Private live temperatures for the homelab.",
+  "name": "Homelab Monitor",
+  "short_name": "Homelab",
+  "description": "Private live temperature and usage telemetry for the homelab.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

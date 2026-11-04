@@ -4,50 +4,55 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0c1017">
-  <meta name="description" content="Private live temperature overview for FAEX1, MS-01 and Flashstor 12 Pro.">
-  <title>HOMELAB TEMP MONITOR</title>
+  <meta name="description" content="Private live temperature and usage overview for FAEX1, MS-01 and Flashstor 12 Pro.">
+  <title>HOMELAB MONITOR</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/style.css">
   <script src="/app.js" defer></script>
-  <!-- HOMELAB TEMP PWA v1 -->
+  <!-- HOMELAB MONITOR PWA v2 -->
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Homelab Temp">
-  <meta name="application-name" content="Homelab Temp Monitor">
+  <meta name="apple-mobile-web-app-title" content="Homelab Monitor">
+  <meta name="application-name" content="Homelab Monitor">
 </head>
 <body>
   <div class="shell" id="shell">
     <header class="topbar">
       <div class="brand">
         <div class="brand-icon" aria-hidden="true"><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M10 17V6a4 4 0 0 1 8 0v11a7 7 0 1 1-8 0z"/><path d="M14 10v11"/><circle cx="14" cy="21" r="2"/></svg></div>
-        <div><div class="brand-name">HOMELAB <span>TEMP MONITOR</span></div><div class="brand-sub">TEMPERATURE CONTROL CENTER</div></div>
+        <div><div class="brand-name">HOMELAB <span>MONITOR</span></div><div class="brand-sub">SYSTEM CONTROL CENTER</div></div>
       </div>
+      <nav class="tabs" role="tablist" aria-label="Monitor view">
+        <button class="tab is-active" id="tab-temperature" type="button" role="tab" aria-selected="true" aria-controls="temp-panel">TEMPERATURE</button>
+        <button class="tab" id="tab-usage" type="button" role="tab" aria-selected="false" aria-controls="usage-panel">USAGE</button>
+      </nav>
+      <div class="refresh-box"><button id="refresh-btn" type="button" class="refresh-icon" title="Refresh readings now" aria-label="Refresh readings now">↻</button><span id="freshness">Waiting for first reading</span></div>
       <div class="topright"><div class="clock" id="clock">--:--:--</div><div class="connection" id="connection"><span class="led"></span><span>CONNECTING</span></div></div>
     </header>
 
     <main>
-      <div class="heading-block">
-        <div><div class="eyebrow"><span class="tiny-dot"></span> LIVE TELEMETRY / ALL SYSTEMS</div>
-          <h1>System overview<span class="title-period">.</span></h1>
-          <p>Current temperatures, across every machine. Nothing stored.</p>
-        </div>
-        <div class="refresh-box"><button id="refresh-btn" type="button" class="refresh-icon" title="Read temperatures now" aria-label="Refresh temperatures now">↻</button><span id="freshness">Waiting for first reading</span></div>
-      </div>
       <div id="demo-banner" class="demo-banner" hidden>DEMO MODE — readings are examples, not from your machines.</div>
-      <div id="demo-legend" class="demo-legend" hidden>
-        <span>DEMO COLOR EXAMPLES</span>
-        <b class="text-green">NORMAL 45°C</b>
-        <b class="text-warn">ELEVATED 65°C</b>
-        <b class="text-danger">HOT 75°C</b>
-      </div>
-      <div class="stats" id="stats" aria-label="Overview metrics"></div>
-      <div class="section-heading"><h2>Compute nodes</h2><div class="section-caption">CPU · GPU · STORAGE</div></div>
-      <div id="compute" class="compute-grid"><div class="loading">Connecting to sensors…</div></div>
-      <div class="section-heading section-nas"><h2>Storage node</h2><div class="section-caption">12-DRIVE NVME ARRAY</div></div>
-      <div id="storage" class="storage-grid"></div>
-      <footer><span>HOMELAB TEMP MONITOR <span class="footer-version">v1.0</span></span><span>LIVE ONLY <span class="footer-sep">/</span> NO DATABASE <span class="footer-sep">/</span> LOCAL FIRST</span></footer>
+      <section id="temp-panel" role="tabpanel" aria-labelledby="tab-temperature">
+        <div id="demo-legend" class="demo-legend" hidden>
+          <span>DEMO COLOR EXAMPLES</span>
+          <b class="text-green">NORMAL 45°C</b>
+          <b class="text-warn">ELEVATED 65°C</b>
+          <b class="text-danger">HOT 75°C</b>
+        </div>
+        <div class="section-heading"><h2>Compute nodes</h2></div>
+        <div id="compute" class="compute-grid"><div class="loading">Connecting to sensors…</div></div>
+        <div class="section-heading section-nas"><h2>Storage node</h2></div>
+        <div id="storage" class="storage-grid"></div>
+      </section>
+      <section id="usage-panel" role="tabpanel" aria-labelledby="tab-usage" hidden>
+        <div class="section-heading"><h2>Compute nodes</h2></div>
+        <div id="usage-compute" class="compute-grid"><div class="loading">Waiting for usage data…</div></div>
+        <div class="section-heading section-nas"><h2>Storage node</h2></div>
+        <div id="usage-storage" class="storage-grid"></div>
+      </section>
+      <footer><span>HOMELAB MONITOR <span class="footer-version">v1.1</span></span><span>LIVE ONLY <span class="footer-sep">/</span> NO DATABASE <span class="footer-sep">/</span> LOCAL FIRST</span></footer>
     </main>
   </div>
 </body>
