@@ -63,7 +63,7 @@
 
   tasks:
     - name: Create llmster directories
-      ansible.builtin.file:
+      file:
         path: "{{ item }}"
         state: directory
         owner: rex
@@ -74,13 +74,13 @@
         - "{{ llmster_home }}"
 
     - name: Link models
-      ansible.builtin.file:
+      file:
         src: "{{ llmster_models }}"
         dest: "{{ llmster_home }}/models"
         state: link
 
     - name: Install llmster
-      ansible.builtin.shell: |
+      shell: |
         set -o pipefail
         curl -fsSL https://lmstudio.ai/install.sh | bash
       args:
@@ -88,19 +88,19 @@
         creates: "{{ llmster_home }}/bin/lms"
 
     - name: Install ROCm runtime
-      ansible.builtin.command:
+      command:
         cmd: "{{ llmster_home }}/bin/lms runtime get llama.cpp-linux-x86_64-amd-rocm-avx2 --channel stable --yes"
       register: runtime_install
       changed_when: "'is already installed' not in (runtime_install.stdout ~ runtime_install.stderr)"
 
     - name: Select ROCm runtime
-      ansible.builtin.command:
+      command:
         cmd: "{{ llmster_home }}/bin/lms runtime select llama.cpp-linux-x86_64-amd-rocm-avx2 --latest"
       register: runtime_selection
       changed_when: "'Selected ' in runtime_selection.stdout"
 
     - name: Create model-default directories
-      ansible.builtin.file:
+      file:
         path: "{{ llmster_defaults }}/{{ item.repo }}"
         state: directory
         owner: rex
@@ -111,7 +111,7 @@
         label: "{{ item.repo }}"
 
     - name: Configure model context lengths
-      ansible.builtin.copy:
+      copy:
         dest: "{{ llmster_defaults }}/{{ item.repo }}/{{ item.file }}.json"
         owner: rex
         group: rex
@@ -132,7 +132,7 @@
       register: llmster_model_defaults
 
     - name: Configure llmster service
-      ansible.builtin.copy:
+      copy:
         dest: "{{ llmster_dir }}/lmstudio.service"
         owner: rex
         group: rex
@@ -164,7 +164,7 @@
 
     - name: Link llmster service
       become: true
-      ansible.builtin.file:
+      file:
         src: "{{ llmster_dir }}/lmstudio.service"
         dest: /etc/systemd/system/lmstudio.service
         state: link
@@ -172,7 +172,7 @@
 
     - name: Start llmster
       become: true
-      ansible.builtin.systemd_service:
+      systemd_service:
         name: lmstudio
         enabled: true
         daemon_reload: true

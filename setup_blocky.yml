@@ -12,7 +12,7 @@
 
   tasks:
     - name: Create Blocky directory
-      ansible.builtin.file:
+      file:
         path: "{{ blocky_dir }}"
         state: directory
         owner: rex
@@ -20,7 +20,7 @@
         mode: "0755"
 
     - name: Configure Blocky
-      ansible.builtin.copy:
+      copy:
         dest: "{{ blocky_dir }}/config.yml"
         owner: rex
         group: rex
@@ -81,37 +81,26 @@
             dns: 53
       register: blocky_config
 
-    - name: Create Docker Compose configuration
-      ansible.builtin.copy:
-        dest: "{{ blocky_dir }}/compose.yaml"
-        owner: rex
-        group: rex
-        mode: "0644"
-        content: |
-          services:
-            blocky:
-              image: spx01/blocky:{{ blocky_version }}
-              container_name: blocky
-              restart: unless-stopped
-
-              environment:
-                TZ: Asia/Taipei
-
-              ports:
-                # LAN
-                - "{{ ms01_ip }}:53:53/tcp"
-                - "{{ ms01_ip }}:53:53/udp"
-
-                # Tailscale
-                - "{{ ms01_tailscale_ip }}:53:53/tcp"
-                - "{{ ms01_tailscale_ip }}:53:53/udp"
-
-              volumes:
-                - ./config.yml:/app/config.yml:ro
-
     - name: Deploy Blocky
-      community.docker.docker_compose_v2:
-        project_src: "{{ blocky_dir }}"
-        state: present
+      docker_container:
+        name: blocky
+        image: "spx01/blocky:{{ blocky_version }}"
+        state: started
+        restart_policy: unless-stopped
         pull: missing
-        recreate: "{{ 'always' if blocky_config.changed else 'auto' }}"
+        recreate: "{{ blocky_config.changed }}"
+
+        env:
+          TZ: Asia/Taipei
+
+        published_ports:
+          # LAN
+          - "{{ ms01_ip }}:53:53/tcp"
+          - "{{ ms01_ip }}:53:53/udp"
+
+          # Tailscale
+          - "{{ ms01_tailscale_ip }}:53:53/tcp"
+          - "{{ ms01_tailscale_ip }}:53:53/udp"
+
+        volumes:
+          - "{{ blocky_dir }}/config.yml:/app/config.yml:ro"

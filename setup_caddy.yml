@@ -12,7 +12,7 @@
 
   tasks:
     - name: Create Caddy directories
-      ansible.builtin.file:
+      file:
         path: "{{ item }}"
         state: directory
         owner: rex
@@ -25,7 +25,7 @@
         - "{{ caddy_dir }}/config"
 
     - name: Configure Caddy
-      ansible.builtin.copy:
+      copy:
         dest: "{{ caddy_dir }}/conf/Caddyfile"
         owner: rex
         group: rex
@@ -56,41 +56,30 @@
           }
       register: caddy_config
 
-    - name: Create Docker Compose configuration
-      ansible.builtin.copy:
-        dest: "{{ caddy_dir }}/compose.yaml"
-        owner: rex
-        group: rex
-        mode: "0644"
-        content: |
-          services:
-            caddy:
-              image: caddy:{{ caddy_version }}-alpine
-              container_name: caddy
-              restart: unless-stopped
-
-              environment:
-                TZ: Asia/Taipei
-
-              ports:
-                # LAN
-                - "{{ ms01_ip }}:80:80"
-                - "{{ ms01_ip }}:443:443"
-                - "{{ ms01_ip }}:443:443/udp"
-
-                # Tailscale
-                - "{{ ms01_tailscale_ip }}:80:80"
-                - "{{ ms01_tailscale_ip }}:443:443"
-                - "{{ ms01_tailscale_ip }}:443:443/udp"
-
-              volumes:
-                - ./conf:/etc/caddy:ro
-                - ./data:/data
-                - ./config:/config
-
     - name: Deploy Caddy
-      community.docker.docker_compose_v2:
-        project_src: "{{ caddy_dir }}"
-        state: present
+      community.docker.docker_container:
+        name: caddy
+        image: "caddy:{{ caddy_version }}-alpine"
+        state: started
+        restart_policy: unless-stopped
         pull: missing
-        recreate: "{{ 'always' if caddy_config.changed else 'auto' }}"
+        recreate: "{{ caddy_config.changed }}"
+
+        env:
+          TZ: Asia/Taipei
+
+        published_ports:
+          # LAN
+          - "{{ ms01_ip }}:80:80/tcp"
+          - "{{ ms01_ip }}:443:443/tcp"
+          - "{{ ms01_ip }}:443:443/udp"
+
+          # Tailscale
+          - "{{ ms01_tailscale_ip }}:80:80/tcp"
+          - "{{ ms01_tailscale_ip }}:443:443/tcp"
+          - "{{ ms01_tailscale_ip }}:443:443/udp"
+
+        volumes:
+          - "{{ caddy_dir }}/conf:/etc/caddy:ro"
+          - "{{ caddy_dir }}/data:/data"
+          - "{{ caddy_dir }}/config:/config"
