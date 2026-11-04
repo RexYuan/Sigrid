@@ -2,7 +2,6 @@
 ---
 - name: Deploy Homelab Temp Monitor
   hosts: ms01
-  become: true
 
   vars:
     monitor_src: "{{ playbook_dir }}/services/homelab-monitor"
@@ -10,7 +9,7 @@
 
   tasks:
     - name: Create monitor directories
-      ansible.builtin.file:
+      file:
         path: "{{ item }}"
         state: directory
         owner: rex
@@ -21,7 +20,7 @@
         - "{{ monitor_dir }}/static"
 
     - name: Deploy backend and configuration
-      ansible.builtin.copy:
+      copy:
         src: "{{ monitor_src }}/{{ item }}"
         dest: "{{ monitor_dir }}/{{ item }}"
         owner: rex
@@ -35,7 +34,7 @@
       notify: Restart Homelab Temp Monitor
 
     - name: Deploy static assets
-      ansible.builtin.copy:
+      copy:
         src: "{{ monitor_src }}/static/"
         dest: "{{ monitor_dir }}/static/"
         owner: rex
@@ -45,7 +44,7 @@
       notify: Restart Homelab Temp Monitor
 
     - name: Install systemd service
-      ansible.builtin.copy:
+      copy:
         dest: /etc/systemd/system/homelab-temp-monitor.service
         owner: root
         group: root
@@ -74,7 +73,8 @@
       notify: Restart Homelab Temp Monitor
 
     - name: Enable and start service
-      ansible.builtin.systemd_service:
+      become: true
+      systemd_service:
         name: homelab-temp-monitor.service
         enabled: true
         state: started
@@ -82,7 +82,8 @@
 
   handlers:
     - name: Restart Homelab Temp Monitor
-      ansible.builtin.systemd_service:
+      become: true
+      systemd_service:
         name: homelab-temp-monitor.service
         state: restarted
         daemon_reload: true

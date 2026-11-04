@@ -3,7 +3,6 @@
 - name: Deploy temperature monitors to MS-01, FAEX1, and Flashstor
   hosts: ms01,faex1,flashstor
   gather_facts: false
-  become: false
 
   vars:
     temps_target: "{{ (group_names | intersect(['ms01', 'faex1', 'flashstor'])) | first }}"
@@ -1083,13 +1082,13 @@
 
   tasks:
     - name: Ensure bin directory exists
-      ansible.builtin.file:
+      file:
         path: "{{ temps_dir }}"
         state: directory
         mode: "0755"
 
     - name: Deploy temps
-      ansible.builtin.copy:
+      copy:
         dest: "{{ temps_dir }}/temps"
         content: "{{ temps_scripts[temps_target] }}"
         mode: "0755"

@@ -2,7 +2,6 @@
 ---
 - name: Set up Blocky on MS-01
   hosts: ms01
-  become: true
 
   vars_files:
     - common.yml
