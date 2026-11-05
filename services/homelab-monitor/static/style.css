@@ -345,3 +345,38 @@ header.topbar {
     font-size: 30px;
   }
 }
+
+
+/* FAEX1 SSD grid layout */
+
+/* Temperature: three SSD cards, one row. */
+#temp-panel .host-faex1 .drives-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Usage: two SSD cards, one row. */
+#usage-panel .host-faex1 .usage-drive-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Allow longer SSD names to wrap naturally. */
+#temp-panel .host-faex1 .drive-title,
+#usage-panel .host-faex1 .usage-drive .drive-title {
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 1.35;
+}
+
+/* Responsive layout. */
+@media (max-width: 1100px) {
+  #temp-panel .host-faex1 .drives-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  #temp-panel .host-faex1 .drives-grid,
+  #usage-panel .host-faex1 .usage-drive-list {
+    grid-template-columns: 1fr;
+  }
+}

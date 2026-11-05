@@ -78,7 +78,10 @@
               adm-offsite.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
 
           ports:
-            dns: 53
+            dns:
+              - "{{ ms01_ip }}:53"
+              - "{{ ms01_tailscale_ip }}:53"
+            freeBind: true
       register: blocky_config
 
     - name: Deploy Blocky
@@ -89,18 +92,10 @@
         restart_policy: unless-stopped
         pull: missing
         recreate: "{{ blocky_config.changed }}"
+        network_mode: host
 
         env:
           TZ: Asia/Taipei
-
-        published_ports:
-          # LAN
-          - "{{ ms01_ip }}:53:53/tcp"
-          - "{{ ms01_ip }}:53:53/udp"
-
-          # Tailscale
-          - "{{ ms01_tailscale_ip }}:53:53/tcp"
-          - "{{ ms01_tailscale_ip }}:53:53/udp"
 
         volumes:
           - "{{ blocky_dir }}/config.yml:/app/config.yml:ro"

@@ -59,7 +59,7 @@ function driveCard(ssd, index, wide) {
 function cardFor(host) {
   const data = host.data || {};
   const wide = host.id === 'flashstor';
-  const section = element('section','node ' + (wide ? 'node-wide ' : '') + (!host.online ? 'is-offline' : ''));
+  const section = element('section','node host-' + host.id + ' ' + (wide ? 'node-wide ' : '') + (!host.online ? 'is-offline' : ''));
   const header = element('div','node-header');
   const nameContainer = element('div','node-title-wrap');
   const icon = element('div','node-icon');
@@ -88,7 +88,10 @@ function cardFor(host) {
   } else {
     content.append(metricContainer);
   }
-  const disks = (Array.isArray(data.ssds) ? data.ssds : []).map(s => host.online ? s : {...s, c:null});
+  const detectedSsds = Array.isArray(data.ssds) ? data.ssds : [];
+  const disks = detectedSsds
+    .filter(s => !(host.id === 'faex1' && (s.name || '').endsWith(' — Windows')))
+    .map(s => host.online ? s : {...s, c:null});
   const diskBlock = element('div','disk-block');
   const diskHeader = element('div','drives-title');
   diskHeader.append(element('span','',wide ? 'CRUCIAL P3 PLUS 4 TB ARRAY' : 'STORAGE'),element('span','',disks.length + ' SSD' + (disks.length===1?'':'s')));
@@ -110,7 +113,7 @@ function cardFor(host) {
     content.append(diskBlock);
   } else { content.append(diskBlock); }
   section.append(content);
-  if (Number(data.expected_ssds) > 0 && data.expected_ssds !== disks.length)
+  if (Number(data.expected_ssds) > 0 && data.expected_ssds !== detectedSsds.length)
     section.append(element('div','missing','Expected '+data.expected_ssds+' drives; detected '+disks.length+'.'));
   return section;
 }
@@ -200,7 +203,7 @@ function usageCardFor(host) {
   const data = host.data || {};
   const usage = data.usage || {};
   const wide = host.id === 'flashstor';
-  const section = element('section', 'node usage-node ' + (wide ? 'node-wide ' : '') + (!host.online ? 'is-offline' : ''));
+  const section = element('section', 'node usage-node host-' + host.id + ' ' + (wide ? 'node-wide ' : '') + (!host.online ? 'is-offline' : ''));
   const header = element('div', 'node-header');
   const left = element('div', 'node-title-wrap');
   const icon = element('div', 'node-icon');
