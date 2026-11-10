@@ -1,0 +1,93 @@
+
+---
+- name: Set up Samba on MS-01 and FAEX1
+  hosts: ms01,faex1
+  become: true
+
+  vars_files:
+    - secret.yml
+
+  vars:
+    samba_user: rex
+    samba_share_path: /home
+    samba_share_name: "{{ 'ms01' if 'ms01' in group_names else 'faex1' }}"
+
+  tasks:
+    - name: Verify host group
+      assert:
+        that:
+          - (group_names | intersect(['ms01', 'faex1']) | length) == 1
+        fail_msg: "Host must belong to exactly one of ms01 or faex1."
+
+    - name: Install Samba
+      apt:
+        name: samba
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Disable NetBIOS service
+      systemd_service:
+        name: nmbd
+        enabled: false
+        state: stopped
+
+    - name: Configure Samba
+      copy:
+        dest: /etc/samba/smb.conf
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+        validate: /usr/bin/testparm -s %s
+        content: |
+          [global]
+             workgroup = REXGROUP
+             server string = {{ samba_share_name }}
+             disable netbios = yes
+             smb ports = 445
+             map to guest = never
+             hosts allow = 127.0.0.1 ::1 192.168.50.0/24 100.64.0.0/10
+             hosts deny = ALL
+
+          [{{ samba_share_name }}]
+             path = {{ samba_share_path }}
+             browseable = yes
+             read only = no
+             guest ok = no
+             valid users = {{ samba_user }}
+             wide links = no
+      notify: Restart Samba
+
+    - name: Check existing Samba users
+      command: pdbedit -L
+      register: samba_users
+      changed_when: false
+
+    - name: Create Samba user
+      command:
+        argv:
+          - smbpasswd
+          - -s
+          - -a
+          - "{{ samba_user }}"
+        stdin: "{{ samba_password }}\n{{ samba_password }}"
+        stdin_add_newline: true
+      when: samba_users.stdout_lines | select('match', '^' ~ samba_user ~ ':') | list | length == 0
+      no_log: true
+
+    - name: Enable and start Samba
+      systemd_service:
+        name: smbd
+        enabled: true
+        state: started
+
+    - name: Verify Samba configuration
+      command: testparm -s
+      changed_when: false
+
+  handlers:
+    - name: Restart Samba
+      systemd_service:
+        name: smbd
+        state: restarted

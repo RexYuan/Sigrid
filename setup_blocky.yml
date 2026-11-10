@@ -59,6 +59,7 @@
 
               ; Tailscale machines
               ms01.{{ tailscale_domain }}. 300 IN A {{ ms01_tailscale_ip }}
+              faex1.{{ tailscale_domain }}. 300 IN A {{ faex1_tailscale_ip }}
 
               ; LAN reverse proxy
               proxy.{{ service_domain }}. 300 IN A {{ reverse_proxy_ip }}
