@@ -68,6 +68,11 @@
               webui.{{ service_domain }}. 300 IN CNAME proxy.{{ service_domain }}.
               adm.{{ service_domain }}. 300 IN CNAME proxy.{{ service_domain }}.
 
+              ; LAN Glances
+              ms01.glances.{{ service_domain }}. 300 IN CNAME proxy.{{ service_domain }}.
+              faex1.glances.{{ service_domain }}. 300 IN CNAME proxy.{{ service_domain }}.
+              flashstor.glances.{{ service_domain }}. 300 IN CNAME proxy.{{ service_domain }}.
+
               ; Tailscale reverse proxy
               proxy.{{ service_domain }}.{{ tailscale_domain }}. 300 IN A {{ ms01_tailscale_ip }}
 
@@ -77,6 +82,11 @@
               adm.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
               adm-offsite.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
 
+              ; Tailscale Glances
+              ms01.glances.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
+              faex.glances.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
+              flashstor.glances.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
+
           ports:
             dns:
               - "{{ ms01_ip }}:53"
@@ -85,7 +95,7 @@
       register: blocky_config
 
     - name: Deploy Blocky
-      docker_container:
+      community.docker.docker_container:
         name: blocky
         image: "spx01/blocky:{{ blocky_version }}"
         state: started

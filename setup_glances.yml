@@ -1,0 +1,180 @@
+
+---
+- name: Set up Glances on MS-01 and FAEX1
+  hosts: ms01,faex1
+  become: true
+
+  vars:
+    glances_version: "4.5.9"
+
+  tasks:
+    # ---------- Ubuntu (pipx + systemd) ----------
+    - name: Install pipx
+      apt:
+        name:
+          - pipx
+          - python3-packaging
+        state: present
+
+    - name: Install Glances via pipx
+      community.general.pipx:
+        name: "glances[web,containers,gpu,sensors]=={{ glances_version }}"
+        state: present
+        executable: /usr/bin/pipx
+      become_user: rex
+      notify: Restart Glances
+
+    - name: Configure Glances service
+      copy:
+        dest: /etc/systemd/system/glances.service
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Glances System Monitor
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          Type=simple
+          User=rex
+          Group=rex
+          ExecStart=/home/rex/.local/bin/glances -w
+          Restart=on-failure
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: Restart Glances
+
+    - name: Enable and start Glances
+      systemd_service:
+        name: glances
+        enabled: true
+        state: started
+        daemon_reload: true
+
+  handlers:
+    - name: Restart Glances
+      systemd_service:
+        name: glances
+        state: restarted
+        daemon_reload: true
+
+
+- name: Set up Glances on Flashstor
+  hosts: flashstor
+  become: true
+
+  vars:
+    glances_version: "4.5.9"
+
+  tasks:
+    # ---------- Flashstor (Entware + ADM) ----------
+    - name: Install Glances via pip
+      command:
+        argv:
+          - /opt/bin/pip3
+          - install
+          - "glances[web]=={{ glances_version }}"
+      register: glances_install
+      changed_when: "'Successfully installed' in glances_install.stdout"
+
+    - name: Install Entware init.d Glances service script
+      copy:
+        dest: /opt/etc/init.d/S99glances
+        owner: root
+        group: root
+        mode: "0755"
+        content: |
+          #!/bin/sh
+
+          PIDFILE=/opt/var/run/glances.pid
+          LOGFILE=/opt/var/log/glances.log
+
+          is_running() {
+            [ -s "$PIDFILE" ] || return 1
+            PID=$(cat "$PIDFILE")
+
+            case "$PID" in
+              ''|*[!0-9]*) return 1 ;;
+            esac
+
+            kill -0 "$PID" 2>/dev/null || return 1
+            [ -r "/proc/$PID/cmdline" ] || return 1
+
+            tr '\000' ' ' < "/proc/$PID/cmdline" |
+              grep -Fq '/opt/bin/python3 -m glances -w'
+          }
+
+          start() {
+            if is_running; then
+              echo "Glances already running."
+              return 0
+            fi
+
+            mkdir -p /opt/var/run /opt/var/log || return 1
+            rm -f "$PIDFILE"
+
+            echo "Starting Glances..."
+            nohup /opt/bin/python3 -m glances -w > "$LOGFILE" 2>&1 &
+            echo $! > "$PIDFILE"
+
+            sleep 1
+
+            if ! is_running; then
+              echo "Glances failed to start. See $LOGFILE" >&2
+              rm -f "$PIDFILE"
+              return 1
+            fi
+          }
+
+          stop() {
+            if ! is_running; then
+              echo "Glances not running."
+              rm -f "$PIDFILE"
+              return 0
+            fi
+
+            echo "Stopping Glances..."
+            kill "$PID" || return 1
+
+            i=0
+            while is_running; do
+              i=$((i + 1))
+              if [ "$i" -ge 10 ]; then
+                echo "Glances did not stop." >&2
+                return 1
+              fi
+              sleep 1
+            done
+
+            rm -f "$PIDFILE"
+          }
+
+          case "$1" in
+            start)
+              start
+              ;;
+            stop)
+              stop
+              ;;
+            restart)
+              stop && start
+              ;;
+            *)
+              echo "Usage: $0 {start|stop|restart}"
+              exit 1
+              ;;
+          esac
+      register: glances_script
+
+    - name: Restart Glances if installation or service changed
+      command: /opt/etc/init.d/S99glances restart
+      when: glances_install.changed or glances_script.changed
+
+    - name: Ensure Glances is running
+      command: /opt/etc/init.d/S99glances start
+      register: glances_start
+      changed_when: "'Starting Glances...' in glances_start.stdout"

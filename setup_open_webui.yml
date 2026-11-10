@@ -48,7 +48,7 @@
         mode: "0755"
 
     - name: Deploy Open WebUI
-      docker_container:
+      community.docker.docker_container:
         name: faex1-open-webui
         image: "ghcr.io/open-webui/open-webui:v{{ open_webui_version }}-slim"
         state: started
