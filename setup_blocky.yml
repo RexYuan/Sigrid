@@ -67,6 +67,7 @@
               ; LAN services
               temps.{{ service_domain }}. 300 IN CNAME proxy.{{ service_domain }}.
               webui.{{ service_domain }}. 300 IN CNAME proxy.{{ service_domain }}.
+              share.{{ service_domain }}. 300 IN CNAME proxy.{{ service_domain }}.
               adm.{{ service_domain }}. 300 IN CNAME proxy.{{ service_domain }}.
 
               ; LAN Glances
@@ -80,6 +81,7 @@
               ; Tailscale services
               temps.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
               webui.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
+              share.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
               adm.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
               adm-offsite.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
 

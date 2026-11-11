@@ -1,0 +1,53 @@
+
+---
+- name: Set up Local Content Share on MS-01
+  hosts: ms01
+  become: true
+
+  vars_files:
+    - common.yml
+
+  vars:
+    lcs_dir: /home/rex/homelab/local-content-share
+    lcs_version: "v37"
+    lcs_commit: "aaaf267fdd83bc64b08e41069bf81b0feb66cd63"
+    lcs_image: "local-content-share:{{ lcs_version }}-{{ lcs_commit[:12] }}"
+
+  tasks:
+    - name: Create Local Content Share directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: rex
+        group: rex
+        mode: "0755"
+      loop:
+        - "{{ lcs_dir }}"
+        - "{{ lcs_dir }}/data"
+
+    - name: Check out Local Content Share v37
+      git:
+        repo: https://github.com/Tanq16/local-content-share.git
+        dest: "{{ lcs_dir }}/src"
+        version: "{{ lcs_commit }}"
+      become_user: rex
+
+    - name: Build Local Content Share Docker image
+      community.docker.docker_image:
+        name: "{{ lcs_image }}"
+        source: build
+        build:
+          path: "{{ lcs_dir }}/src"
+        state: present
+
+    - name: Run Local Content Share
+      community.docker.docker_container:
+        name: local-content-share
+        image: "{{ lcs_image }}"
+        state: started
+        restart_policy: unless-stopped
+        pull: never
+        published_ports:
+          - "{{ ms01_ip }}:8080:8080"
+        volumes:
+          - "{{ lcs_dir }}/data:/app/data"

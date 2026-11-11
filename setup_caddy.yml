@@ -39,6 +39,10 @@
               reverse_proxy {{ faex1_ip }}:3000
           }
 
+          http://share.{{ service_domain }}, http://share.{{ service_domain }}.{{ tailscale_domain }} {
+              reverse_proxy {{ ms01_ip }}:8080
+          }
+
           http://adm.{{ service_domain }}, http://adm.{{ service_domain }}.{{ tailscale_domain }} {
               reverse_proxy https://{{ flashstor_ip }}:8001 {
                   transport http {
