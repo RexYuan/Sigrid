@@ -1,12 +1,22 @@
-[faex1]
-192.168.50.151 ansible_python_interpreter=/usr/bin/python3.14
 
-[ms01]
-192.168.50.100 ansible_python_interpreter=/usr/bin/python3.14
+[homelab:children]
+servers
+nas
 
-[flashstor]
-192.168.50.95 ansible_port=7778 ansible_python_interpreter=/opt/bin/python3.13
+[servers]
+faex1 ansible_host=192.168.50.151
+ms01 ansible_host=192.168.50.100
 
-[all:vars]
+[nas]
+flashstor ansible_host=192.168.50.95 ansible_port=7778
+flashstor-offsite ansible_host=100.96.0.90 ansible_port=7777
+
+[servers:vars]
+ansible_python_interpreter=/usr/bin/python3.14
+
+[nas:vars]
+ansible_python_interpreter=/opt/bin/python3.13
+
+[homelab:vars]
 ansible_user=rex
 ansible_ssh_private_key_file=~/.ssh/id_rsa

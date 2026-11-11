@@ -142,7 +142,7 @@ trap 'rm -f "$LOCKFILE"' EXIT INT TERM
 SRC="/volume1/shared/dropbox/$NAMESPACE/"
 DST="rsync://$REMOTE_HOST/dropbox/$NAMESPACE/"
 
-LOG_DIR="/home/rex/logs/rsync"
+LOG_DIR="/home/rex/logs/rsync-push"
 mkdir -p "$LOG_DIR"
 
 ########################################
