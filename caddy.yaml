@@ -70,6 +70,10 @@
           http://flashstor.glances.{{ service_domain }}, http://flashstor.glances.{{ service_domain }}.{{ tailscale_domain }} {
               reverse_proxy {{ flashstor_ip }}:61208
           }
+
+          http://flashstor-offsite.glances.{{ service_domain }}.{{ tailscale_domain }} {
+              reverse_proxy {{ flashstor_offsite_tailscale_ip }}:61208
+          }
       register: caddy_config
 
     - name: Deploy Caddy

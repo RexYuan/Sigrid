@@ -63,8 +63,8 @@
         daemon_reload: true
 
 
-- name: Set up Glances on Flashstor
-  hosts: flashstor
+- name: Set up Glances on Flashstors
+  hosts: flashstor,flashstor-offsite
   become: true
 
   vars:

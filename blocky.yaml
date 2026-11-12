@@ -60,6 +60,8 @@
               ; Tailscale machines
               ms01.{{ tailscale_domain }}. 300 IN A {{ ms01_tailscale_ip }}
               faex1.{{ tailscale_domain }}. 300 IN A {{ faex1_tailscale_ip }}
+              flashstor.{{ tailscale_domain }}. 300 IN A {{ flashstor_tailscale_ip }}
+              flashstor-offsite.{{ tailscale_domain }}. 300 IN A {{ flashstor_offsite_tailscale_ip }}
 
               ; LAN reverse proxy
               proxy.{{ service_domain }}. 300 IN A {{ reverse_proxy_ip }}
@@ -74,6 +76,7 @@
               ms01.glances.{{ service_domain }}. 300 IN CNAME proxy.{{ service_domain }}.
               faex1.glances.{{ service_domain }}. 300 IN CNAME proxy.{{ service_domain }}.
               flashstor.glances.{{ service_domain }}. 300 IN CNAME proxy.{{ service_domain }}.
+              flashstor-offsite.glances.{{ service_domain }}. 300 IN CNAME proxy.{{ service_domain }}.
 
               ; Tailscale reverse proxy
               proxy.{{ service_domain }}.{{ tailscale_domain }}. 300 IN A {{ ms01_tailscale_ip }}
@@ -89,6 +92,7 @@
               ms01.glances.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
               faex1.glances.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
               flashstor.glances.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
+              flashstor-offsite.glances.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
 
           ports:
             dns:

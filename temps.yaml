@@ -1,7 +1,7 @@
 
 ---
-- name: Deploy temperature monitors to MS-01, FAEX1, and Flashstor
-  hosts: ms01,faex1,flashstor
+- name: Deploy temperature monitors to MS-01, FAEX1, and Flashstors
+  hosts: ms01,faex1,flashstor,flashstor-offsite
   gather_facts: false
 
   vars:
@@ -17,6 +17,11 @@
         shell: /bin/bash
 
       flashstor:
+        script: services/temps/flashstor.sh
+        directory: /volume1/home/rex/bin
+        shell: /bin/ash
+
+      flashstor-offsite:
         script: services/temps/flashstor.sh
         directory: /volume1/home/rex/bin
         shell: /bin/ash

@@ -20,6 +20,7 @@ jetkvm2_ip: "192.168.50.153"
 # Tailscale devices
 ms01_tailscale_ip: "100.83.250.70"
 faex1_tailscale_ip: "100.115.99.76"
+flashstor_tailscale_ip: "100.77.146.47"
 flashstor_offsite_tailscale_ip: "100.96.0.90"
 
 # Reverse proxy
