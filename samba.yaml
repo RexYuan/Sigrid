@@ -5,20 +5,14 @@
   become: true
 
   vars_files:
-    - secret.yml
+    - secret.yaml
 
   vars:
     samba_user: rex
     samba_share_path: /home
-    samba_share_name: "{{ 'ms01' if 'ms01' in group_names else 'faex1' }}"
+    samba_share_name: "{{ inventory_hostname }}"
 
   tasks:
-    - name: Verify host group
-      assert:
-        that:
-          - (group_names | intersect(['ms01', 'faex1']) | length) == 1
-        fail_msg: "Host must belong to exactly one of ms01 or faex1."
-
     - name: Install Samba
       apt:
         name: samba
@@ -63,6 +57,7 @@
       command: pdbedit -L
       register: samba_users
       changed_when: false
+      check_mode: false
 
     - name: Create Samba user
       command:

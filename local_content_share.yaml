@@ -5,7 +5,7 @@
   become: true
 
   vars_files:
-    - common.yml
+    - common.yaml
 
   vars:
     lcs_dir: /home/rex/homelab/local-content-share

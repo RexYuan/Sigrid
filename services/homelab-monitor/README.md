@@ -62,7 +62,7 @@ if command -v node >/dev/null; then node --check static/app.js; fi
 ### Deployment verification
 
 ```bash
-ansible-playbook setup_homelab_monitor.yml --check --diff
+ansible-playbook homelab_monitor.yaml --check --diff
 ```
 
 Verify HTTP availability:
@@ -80,7 +80,7 @@ curl -fsS http://192.168.50.100:8765/api/live
 ### Deployment
 
 ```bash
-ansible-playbook setup_homelab_monitor.yml
+ansible-playbook homelab_monitor.yaml
 ```
 
 ## Troubleshooting
@@ -177,11 +177,11 @@ flowchart TD
     F <-->|HTTP / JSON| G["Browser<br/>static/app.js"]
 ```
 
-The website is completely independent of the interactive `temps` utilities installed by `setup_temps.yml`. Those scripts read similar underlying hardware sensors but are neither executed nor parsed by the web monitor. The website uses its own collectors, maintained in `services/homelab-monitor/` and deployed only to MS-01 through `setup_homelab_monitor.yml`.
+The website is completely independent of the interactive `temps` utilities installed by `temps.yaml`. Those scripts read similar underlying hardware sensors but are neither executed nor parsed by the web monitor. The website uses its own collectors, maintained in `services/homelab-monitor/` and deployed only to MS-01 through `homelab_monitor.yaml`.
 
 ### Systemd service — `homelab-temp-monitor.service`
 
-`setup_homelab_monitor.yml` installs a system-level systemd unit at `/etc/systemd/system/homelab-temp-monitor.service` on MS-01 and enables it to start automatically at boot.
+`homelab_monitor.yaml` installs a system-level systemd unit at `/etc/systemd/system/homelab-temp-monitor.service` on MS-01 and enables it to start automatically at boot.
 
 The service uses the following configuration:
 
@@ -620,7 +620,7 @@ Host faex1 flashstor
 
 OpenSSH reuses existing connections and keeps idle master connections available for 120 seconds. Remote collectors exit after returning their JSON, but SSH master connections can remain open between collection cycles.
 
-This SSH configuration is maintained separately from `setup_homelab_monitor.yml`.
+This SSH configuration is maintained separately from `homelab_monitor.yaml`.
 
 ### State management and failure handling
 
@@ -661,9 +661,9 @@ The optional service worker (`static/sw.js`) caches static application assets fo
 
 ### Deployment relationship
 
-`setup_homelab_monitor.yml` manages the website files and systemd service on MS-01. The deployed collectors remain on MS-01 even when they execute remotely through SSH.
+`homelab_monitor.yaml` manages the website files and systemd service on MS-01. The deployed collectors remain on MS-01 even when they execute remotely through SSH.
 
-`setup_temps.yml` separately installs the interactive `~/bin/temps` utilities on all three machines. Neither playbook's application depends on the other's scripts, and updating one does not require redeploying the other.
+`temps.yaml` separately installs the interactive `~/bin/temps` utilities on all three machines. Neither playbook's application depends on the other's scripts, and updating one does not require redeploying the other.
 
 ### Collected but not displayed
 

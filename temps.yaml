@@ -1,0 +1,38 @@
+
+---
+- name: Deploy temperature monitors to MS-01, FAEX1, and Flashstor
+  hosts: ms01,faex1,flashstor
+  gather_facts: false
+
+  vars:
+    temps_hosts:
+      ms01:
+        script: services/temps/ms01.sh
+        directory: /home/rex/bin
+        shell: /bin/bash
+
+      faex1:
+        script: services/temps/faex1.sh
+        directory: /home/rex/bin
+        shell: /bin/bash
+
+      flashstor:
+        script: services/temps/flashstor.sh
+        directory: /volume1/home/rex/bin
+        shell: /bin/ash
+
+    temps_config: "{{ temps_hosts[inventory_hostname] }}"
+
+  tasks:
+    - name: Ensure bin directory exists
+      file:
+        path: "{{ temps_config.directory }}"
+        state: directory
+        mode: "0755"
+
+    - name: Deploy temps
+      copy:
+        src: "{{ temps_config.script }}"
+        dest: "{{ temps_config.directory }}/temps"
+        mode: "0755"
+        validate: "{{ temps_config.shell }} -n %s"

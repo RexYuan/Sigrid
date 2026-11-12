@@ -66,6 +66,7 @@
     - name: Verify P5800X is mounted
       command: mountpoint -q /mnt/p5800x
       changed_when: false
+      check_mode: false
 
     - name: Install official Hugging Face CLI
       shell: |

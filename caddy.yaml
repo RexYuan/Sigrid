@@ -4,7 +4,7 @@
   hosts: ms01
 
   vars_files:
-    - common.yml
+    - common.yaml
 
   vars:
     caddy_dir: /home/rex/homelab/caddy
@@ -63,7 +63,7 @@
               reverse_proxy {{ ms01_ip }}:61208
           }
 
-          http://faex1.glances.{{ service_domain }}, http://faex.glances.{{ service_domain }}.{{ tailscale_domain }} {
+          http://faex1.glances.{{ service_domain }}, http://faex1.glances.{{ service_domain }}.{{ tailscale_domain }} {
               reverse_proxy {{ faex1_ip }}:61208
           }
 

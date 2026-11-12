@@ -4,7 +4,7 @@
   hosts: ms01
 
   vars_files:
-    - common.yml
+    - common.yaml
 
   vars:
     blocky_dir: /home/rex/homelab/blocky
@@ -87,7 +87,7 @@
 
               ; Tailscale Glances
               ms01.glances.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
-              faex.glances.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
+              faex1.glances.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
               flashstor.glances.{{ service_domain }}.{{ tailscale_domain }}. 300 IN CNAME proxy.{{ service_domain }}.{{ tailscale_domain }}.
 
           ports:

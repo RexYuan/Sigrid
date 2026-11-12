@@ -47,16 +47,20 @@
     - name: Validate Netplan
       command: netplan generate
       changed_when: false
+      when: not ansible_check_mode
 
     - name: Apply pending network changes
       meta: flush_handlers
+      when: not ansible_check_mode
 
     - name: Verify LACP aggregation
-      command:
-        cmd: cat /sys/class/net/bond0/bonding/ad_num_ports
+      command: cat /sys/class/net/bond0/bonding/ad_num_ports
       register: lacp_ports
       changed_when: false
-      failed_when: lacp_ports.stdout | trim != "2"
+      until: lacp_ports.rc == 0 and lacp_ports.stdout | trim == "2"
+      retries: 5
+      delay: 3
+      when: not ansible_check_mode
 
   handlers:
     - name: Apply Netplan

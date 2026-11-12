@@ -4,7 +4,7 @@
   hosts: faex1
 
   vars_files:
-    - common.yml
+    - common.yaml
 
   vars:
     llmster_dir: /home/rex/homelab/llmster
@@ -92,12 +92,14 @@
         cmd: "{{ llmster_home }}/bin/lms runtime get llama.cpp-linux-x86_64-amd-rocm-avx2 --channel stable --yes"
       register: runtime_install
       changed_when: "'is already installed' not in (runtime_install.stdout ~ runtime_install.stderr)"
+      when: not ansible_check_mode
 
     - name: Select ROCm runtime
       command:
         cmd: "{{ llmster_home }}/bin/lms runtime select llama.cpp-linux-x86_64-amd-rocm-avx2 --latest"
       register: runtime_selection
       changed_when: "'Selected ' in runtime_selection.stdout"
+      when: not ansible_check_mode
 
     - name: Create model-default directories
       file:
@@ -177,3 +179,4 @@
         enabled: true
         daemon_reload: true
         state: "{{ 'restarted' if llmster_config.changed or llmster_service.changed or runtime_install.changed or runtime_selection.changed or llmster_model_defaults.changed else 'started' }}"
+      when: not ansible_check_mode

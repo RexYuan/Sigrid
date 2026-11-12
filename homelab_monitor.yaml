@@ -3,6 +3,9 @@
 - name: Deploy Homelab Temp Monitor
   hosts: ms01
 
+  vars_files:
+    - common.yaml
+
   vars:
     monitor_src: "{{ playbook_dir }}/services/homelab-monitor"
     monitor_dir: /home/rex/homelab/homelab-monitor
@@ -19,7 +22,7 @@
         - "{{ monitor_dir }}"
         - "{{ monitor_dir }}/static"
 
-    - name: Deploy backend and configuration
+    - name: Deploy backend scripts
       copy:
         src: "{{ monitor_src }}/{{ item }}"
         dest: "{{ monitor_dir }}/{{ item }}"
@@ -30,7 +33,15 @@
         - server.py
         - collect_linux.py
         - collect_flashstor.sh
-        - config.json
+      notify: Restart Homelab Temp Monitor
+
+    - name: Deploy configuration
+      copy:
+        src: "{{ monitor_src }}/config.json"
+        dest: "{{ monitor_dir }}/config.json"
+        owner: rex
+        group: rex
+        mode: "0644"
       notify: Restart Homelab Temp Monitor
 
     - name: Deploy static assets
@@ -63,7 +74,7 @@
           WorkingDirectory={{ monitor_dir }}
           Environment=HOME=/home/rex
           Environment=PYTHONUNBUFFERED=1
-          ExecStart=/usr/bin/python3 {{ monitor_dir }}/server.py --bind 192.168.50.100 --port 8765
+          ExecStart=/usr/bin/python3 {{ monitor_dir }}/server.py --bind {{ ms01_ip }} --port 8765
           Restart=on-failure
           RestartSec=3
           NoNewPrivileges=true
